@@ -1,83 +1,64 @@
 #include <cstddef>
-#include <string>
-#include <array>
-#include <iostream>
 #include <vector>
+#include "search.hpp"
 
-int brute_force(const std::string &str,const std::string &pattern){
+std::vector<int> createFailureLinks(const std::string& pattern){
+    std::size_t m=pattern.size();
+    std::vector<int>failureLinks;
 
-    std::size_t l1=str.size();
-    std::size_t l2=pattern.size();
+    failureLinks.resize(m,0);
 
-    if(l2>l1)
-        return -1;
-
-    for(std::size_t i=0;i<=l1-l2;i++){
-        std::size_t j;
-        for(j=0;j<l2;j++){
-            if(str[i+j]!=pattern[j])
-                break;
-        }
-
-        if(j==l2)
-            return i;
-    }
-
-    return -1;
-}
-
-std::array<std::vector<int>, 128> create_dfa(const std::string &pattern){
-    int m=pattern.size();
-
-    std::array<std::vector<int>, 128> transition_fn; // Here each rows represents input character and column represnets the state
-
-    for(std::size_t i=0;i<128;i++){
-        transition_fn[i].resize(m,0);
-    }
-
-    transition_fn[static_cast<int>(pattern[0])][0]=1;
-
+    failureLinks[0]=0;
     int x=0;
 
-    for(std::size_t j=1;j<m;j++){
-        for(std::size_t i=0;i<128;i++){
-            transition_fn[i][j]=transition_fn[i][x];
+
+    for(std::size_t i=1;i<m;i++){
+        failureLinks[i]=x;
+
+        while(pattern[x]!=pattern[i]){
+            if(x==0){
+                x--;
+                break;
+            }else {
+                x=failureLinks[x];
+            }
         }
-        transition_fn[static_cast<int>(pattern[j])][j]=j+1;
-        x=transition_fn[static_cast<int>(pattern[j])][x];
+
+        x++;
     }
 
-
-    return transition_fn;
+    return failureLinks;
 }
 
-int search_dfa(const std::string &str,std::array<std::vector<int>, 128>transition_fn){
-    int m=transition_fn[0].size();
-    int l=str.size();
 
-    int curr_state=0;
-    for(std::size_t i=0;i<l;i++){
-        curr_state=transition_fn[static_cast<int>(str[i])][curr_state];
+int KMP(const std::string& str,const std::string& pattern){
+    std::vector<int> fail=createFailureLinks(pattern);
+    int n=str.size(); // Length of string
+    int m=pattern.size(); // Length of pattern
 
-        if(curr_state==m)
-            return (i-m+1);
+    int i=0; // Current position in str
+    int q=0; // Current state in KMP automaton
 
+    while(i<n){
+        if(str[i]==pattern[q]){
+            i++;
+            q++;
+
+            if(q==m)
+                return i-q;
+        }else{
+            if(q>0)
+                q=fail[q];
+            else
+                i++;
+        }
     }
 
     return -1;
 }
 
-
-
-
-int main(){
-    std::string my_str="hello world";
-    std::string pattern="ld";
-
-    std::cout<<brute_force(my_str,pattern)<<"\n\n";
-
-    std::array<std::vector<int>, 128> transition_fn=create_dfa(pattern);
-
-    std::cout<<search_dfa(my_str,transition_fn)<<"\n\n";
-
+namespace chai{
+    int search(const std::string& str,const std::string& pattern){
+        return KMP(str, pattern);
+    }
 }
